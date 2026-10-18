@@ -1,0 +1,58 @@
+# Electron Builder configuration — Windows x64 installer (NSIS) + portable .exe
+appId: com.tangerine.windows
+productName: Tangerine
+copyright: Copyright © 2026 Tangerine for Windows contributors
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+
+# uiohook-napi ships a native .node binary that must live outside the asar archive.
+asarUnpack:
+  - node_modules/uiohook-napi/**
+
+extraResources:
+  # Bundled converters (populated by `npm run fetch:bin`) → <install>/resources/bin
+  - from: resources/bin
+    to: bin
+    filter: ['**/*', '!.gitkeep']
+  - from: resources/icons
+    to: icons
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  requestedExecutionLevel: asInvoker
+  # Sign in CI by setting CSC_LINK / CSC_KEY_PASSWORD (recommended: avoids SmartScreen warnings).
+  signAndEditExecutable: true
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh
+  artifactName: ${productName}-Setup-${version}-x64.${ext}
+
+portable:
+  artifactName: ${productName}-Portable-${version}-x64.${ext}
+
+# Used only for the opt-in "check for updates" toast (see src/main/services/updates.ts).
+publish:
+  provider: github
+  owner: your-org
+  repo: tangerine-windows
+  releaseType: release

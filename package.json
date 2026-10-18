@@ -1,0 +1,49 @@
+{
+  "name": "tangerine-windows",
+  "productName": "Tangerine",
+  "version": "0.1.0",
+  "description": "Shift-drag any file to convert or edit it. 100% local file conversion for Windows.",
+  "author": "Tangerine for Windows contributors",
+  "license": "MIT",
+  "private": true,
+  "main": "out/main/index.js",
+  "tangerine": {
+    "updateRepo": "your-org/tangerine-windows"
+  },
+  "scripts": {
+    "postinstall": "electron-builder install-app-deps",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "fetch:bin": "node scripts/fetch-binaries.mjs",
+    "fetch:ffmpeg": "powershell -ExecutionPolicy Bypass -File scripts/bundle-ffmpeg.ps1",
+    "verify:bin": "node scripts/verify-binaries.mjs",
+    "dist": "npm run typecheck && npm run build && npm run verify:bin && electron-builder --win --x64",
+    "dist:installer": "npm run build && electron-builder --win nsis --x64",
+    "dist:portable": "npm run build && electron-builder --win portable --x64",
+    "dist:dir": "npm run build && electron-builder --win dir --x64"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "framer-motion": "^11.11.0",
+    "lucide-react": "^0.454.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

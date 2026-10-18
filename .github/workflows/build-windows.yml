@@ -1,0 +1,76 @@
+# Builds the ready-to-install Windows app in the cloud. Nothing runs on your own PC.
+# Every push to "main" (or a click on "Run workflow") produces:
+#   - Tangerine-Setup-<version>-x64.exe     (installer)
+#   - Tangerine-Portable-<version>-x64.exe  (no install needed)
+# published on the repository's Releases page.
+name: Build Windows app
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Restore icons
+        run: node scripts/restore-assets.mjs
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Bundle FFmpeg, ImageMagick, qpdf, Pandoc
+        run: node scripts/fetch-binaries.mjs
+
+      - name: Bundle Ghostscript (PDF compress / PDF to PNG)
+        shell: pwsh
+        run: |
+          choco install ghostscript -y --no-progress
+          $gs = Get-ChildItem 'C:\Program Files\gs' -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path resources\bin\gs | Out-Null
+          Copy-Item -Recurse -Force (Join-Path $gs.FullName 'bin') resources\bin\gs\
+          Copy-Item -Recurse -Force (Join-Path $gs.FullName 'lib') resources\bin\gs\ -ErrorAction SilentlyContinue
+          & resources\bin\gs\bin\gswin64c.exe --version
+
+      - name: Verify bundled tools
+        run: node scripts/verify-binaries.mjs
+
+      - name: Compile
+        run: npm run build
+
+      - name: Package installer + portable exe
+        run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tangerine-Windows
+          path: release/*.exe
+
+      - name: Publish release for download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Tangerine for Windows (build ${{ github.run_number }})
+          make_latest: true
+          body: |
+            **Download one of these and you're done:**
+            - `Tangerine-Setup-...-x64.exe`: installs Tangerine (no admin rights needed) and starts it in the system tray.
+            - `Tangerine-Portable-...-x64.exe`: runs without installing.
+
+            Then hold **Shift** and drag any file.
+
+            Windows may show "Windows protected your PC" because the app isn't code-signed. Click **More info**, then **Run anyway**.
+            Documents to PDF also needs the free LibreOffice: https://www.libreoffice.org/download/
+          files: release/*.exe
